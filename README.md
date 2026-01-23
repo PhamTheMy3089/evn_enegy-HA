@@ -8,7 +8,7 @@ Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EV
 - Theo dõi nhiều mã khách hàng trên cùng một HA.
 - Tự động xác định chi nhánh EVN.
 - Sensor chuẩn Energy (tổng điện năng) để dùng trong Energy Dashboard.
-- Hỗ trợ đầy đủ các khu vực EVN (tùy theo khả năng EVN cung cấp dữ liệu).
+- Hỗ trợ 5 tổng công ty EVN: EVNHANOI, EVNHCMC, EVNNPC, EVNCPC, EVNSPC.
 
 ## Yêu cầu
 - Home Assistant 2022.7.0 trở lên.
@@ -27,9 +27,9 @@ Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EV
 
 ## Thiết lập
 1. Settings → Devices & Services → Add Integration → `EVN Power Insights`.
-2. Nhập `Mã khách hàng` (bắt đầu bằng `P`, 11–13 ký tự).
+2. Nhập `Mã khách hàng` (11–13 ký tự, thường bắt đầu bằng `P`).
 3. Xác nhận thông tin chi nhánh EVN.
-4. Nhập `Username`, `Password`, và `Ngày bắt đầu hóa đơn`.
+4. Nhập `Username`, `Password`, và `Ngày bắt đầu hóa đơn` (chỉ yêu cầu ở một số khu vực; ví dụ EVNCPC không cần).
 
 ## Sensor và Energy Dashboard
 Sensor được giữ lại để dùng cho Energy Dashboard:
@@ -40,7 +40,7 @@ Thêm vào Energy Dashboard:
 2. Chọn entity `Tổng điện năng` (kWh).
 
 ## Giới hạn
-- Dữ liệu cập nhật theo chu kỳ, không tức thì.
+- Dữ liệu cập nhật theo chu kỳ (mặc định 3 giờ), không tức thì.
 
 ## Hỗ trợ
 Vui lòng tạo issue tại repo hoặc xem hướng dẫn trong `SECURITY.md`.

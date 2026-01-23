@@ -8,7 +8,7 @@ This integration fetches EVN electricity consumption data per region and exposes
 - Track multiple customer IDs on one HA instance.
 - Automatic EVN branch detection.
 - Energy-compliant sensor (total energy) for Energy Dashboard.
-- Supports all EVN regions (subject to EVN data availability).
+- Supports 5 EVN companies: EVNHANOI, EVNHCMC, EVNNPC, EVNCPC, EVNSPC.
 
 ## Requirements
 - Home Assistant 2022.7.0 or newer.
@@ -27,9 +27,9 @@ This integration fetches EVN electricity consumption data per region and exposes
 
 ## Setup
 1. Settings → Devices & Services → Add Integration → `EVN Power Insights`.
-2. Enter `Customer ID` (starts with `P`, 11–13 chars).
+2. Enter `Customer ID` (11–13 chars, usually starts with `P`).
 3. Confirm detected EVN branch.
-4. Enter `Username`, `Password`, and `Billing start date`.
+4. Enter `Username`, `Password`, and `Billing start date` (only required for some regions; e.g. EVNCPC does not need it).
 
 ## Sensors and Energy Dashboard
 The only sensor kept for Energy Dashboard:
@@ -40,7 +40,7 @@ Add to Energy Dashboard:
 2. Choose `Total energy` (kWh) entity.
 
 ## Limitations
-- Data updates are periodic, not real-time.
+- Data updates are periodic (default 3 hours), not real-time.
 
 ## Support
 Please open an issue or follow guidance in `SECURITY.md`.
