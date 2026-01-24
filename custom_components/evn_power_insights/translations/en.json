@@ -2,14 +2,14 @@
     "config": {
         "abort": {
             "already_configured": "A device with your Customer ID has already been configured.",
-            "not_supported": "Based on your Customer ID: **{customer_id}**\nAutomatically detect your EVN location:\n- EVN Company: **{evn_name}**\n- EVN Location: **{evn_location}**\n- EVN Branch: **{evn_branch}**\n\nUnfortunately, your EVN location has not been supported yet.\nPlease contact **github@trvqhuy**, together we could make it happen.",
+            "not_supported": "Based on your Customer ID: **{customer_id}**\nAutomatically detect your EVN location:\n- EVN Company: **{evn_name}**\n- EVN Location: **{evn_location}**\n- EVN Branch: **{evn_branch}**\n\nUnfortunately, your EVN location has not been supported yet.\nPlease open an issue in the repository.",
             "unknown": "Invalid EVN Customer ID: **{customer_id}**"
         },
         "error": {
             "cannot_connect": "Failed to connect to EVN Server.",
             "invalid_auth": "Invalid EVN authentication. Please recheck your Username and Password.",
-            "unknown": "Unexpected error. Please contact github@trvqhuy.",
-            "not_supported": "Your EVN Branch has not been supported yet. Please contact github@trvqhuy.",
+            "unknown": "Unexpected error. Please open an issue in the repository.",
+            "not_supported": "Your EVN Branch has not been supported yet. Please open an issue in the repository.",
             "error_ma_kh_deny": "Invalid EVN Customer ID. Please recheck your Customer ID",
             "no_monitor": "Your monitor is not supported yet. Please choose another Customer ID"
         },

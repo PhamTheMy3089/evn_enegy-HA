@@ -1,6 +1,6 @@
 # EVN Power Insights cho Home Assistant
 
-[English](README_en.md) | Tiếng Việt
+[Tiếng Việt](README.md) | [English](README_EN.md)
 
 Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EVN theo khu vực và hiển thị trên Home Assistant thông qua các sensor. Hỗ trợ cài đặt qua UI, tự động nhận diện tổng công ty EVN dựa trên mã khách hàng.
 
@@ -16,17 +16,23 @@ Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EV
 - Tài khoản EVN hợp lệ (username/password).
 
 ## Cài đặt
-### Cài qua HACS (khuyến nghị)
-1. HACS → Integrations → Explore & download repositories.
-2. Tìm `EVN Power Insights` → Download.
-3. Khởi động lại Home Assistant.
+### Qua HACS (Khuyến nghị)
+1. Mở HACS trong Home Assistant.
+2. Vào tab "Integrations".
+3. Click vào menu 3 chấm ở góc trên bên phải.
+4. Chọn "Custom repositories".
+5. Thêm repository URL và chọn category "Integration".
+6. Tìm "EVN Power Insights" và click "Install".
+7. Restart Home Assistant.
 
-### Cài thủ công
-1. Copy `custom_components/evn_power_insights` vào thư mục `custom_components` của HA.
-2. Khởi động lại Home Assistant.
+### Cài đặt thủ công
+1. Copy thư mục `custom_components/evn_power_insights` vào thư mục `custom_components` của Home Assistant.
+2. Restart Home Assistant.
+3. Vào Settings > Devices & Services > Add Integration.
+4. Tìm "EVN Power Insights" và làm theo hướng dẫn.
 
-## Thiết lập
-1. Settings → Devices & Services → Add Integration → `EVN Power Insights`.
+## Cấu hình
+1. Vào Settings > Devices & Services > Add Integration > "EVN Power Insights".
 2. Nhập `Mã khách hàng` (11–13 ký tự, thường bắt đầu bằng `P`).
 3. Xác nhận thông tin chi nhánh EVN.
 4. Nhập `Username`, `Password`, và `Ngày bắt đầu hóa đơn` (chỉ yêu cầu ở một số khu vực; ví dụ EVNCPC không cần).
@@ -43,7 +49,7 @@ Thêm vào Energy Dashboard:
 - Dữ liệu cập nhật theo chu kỳ (mặc định 3 giờ), không tức thì.
 
 ## Hỗ trợ
-Vui lòng tạo issue tại repo hoặc xem hướng dẫn trong `SECURITY.md`.
+Vui lòng tạo issue trên GitHub repository.
 
 ## Nguồn tham khảo
 - https://github.com/trvqhuy/nestup_evn/tree/main

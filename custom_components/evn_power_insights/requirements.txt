@@ -1,4 +1,3 @@
 homeassistant==2022.9.0
-homeassistant.egg==info
-python_dateutil==2.8.2
+python-dateutil==2.8.2
 voluptuous

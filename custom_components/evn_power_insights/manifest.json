@@ -1,14 +1,13 @@
 {
-    "config_flow": true,
-    "dependencies": [],
-    "documentation": "https://github.com/trvqhuy/evn-power-insights/",
-    "domain": "evn_power_insights",
-    "iot_class": "cloud_polling",
-    "issue_tracker": "https://github.com/trvqhuy/evn-power-insights/issues",
-    "name": "EVN Power Insights",
-    "requirements": [
-        "python_dateutil",
-        "voluptuous"
-    ],
-    "version": "0.0.1"
+  "domain": "evn_power_insights",
+  "name": "EVN Power Insights",
+  "codeowners": ["@PhamTheMy3089"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/PhamTheMy3089/evn_enegy-HA",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/PhamTheMy3089/evn_enegy-HA/issues",
+  "requirements": ["python-dateutil", "voluptuous"],
+  "version": "0.0.1"
 }
