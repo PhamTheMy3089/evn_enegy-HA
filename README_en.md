@@ -7,7 +7,7 @@ This integration fetches EVN electricity consumption data per region and exposes
 ## Features
 - Track multiple customer IDs on one HA instance.
 - Automatic EVN branch detection.
-- Energy-compliant sensor (total energy) for Energy Dashboard.
+- Energy sensor based on meter timestamp for Energy Dashboard.
 - Supports 5 EVN companies: EVNHANOI, EVNHCMC, EVNNPC, EVNCPC, EVNSPC.
 
 ## Requirements
@@ -33,14 +33,15 @@ This integration fetches EVN electricity consumption data per region and exposes
 
 ## Sensors and Energy Dashboard
 The only sensor kept for Energy Dashboard:
-- `Total energy` (Energy compliant)
+- `EVN Energy (theo thoi diem do)` (Energy compliant)
 
 Add to Energy Dashboard:
 1. Settings → Energy → Add consumption.
-2. Choose `Total energy` (kWh) entity.
+2. Choose `EVN Energy (theo thoi diem do)` (kWh) entity.
 
 ## Limitations
 - Data updates are periodic (default 3 hours), not real-time.
+- Energy date is recorded based on meter time when available.
 
 ## Support
 Please open an issue or follow guidance in `SECURITY.md`.

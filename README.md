@@ -7,7 +7,7 @@ Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EV
 ## Tính năng
 - Theo dõi nhiều mã khách hàng trên cùng một HA.
 - Tự động xác định chi nhánh EVN.
-- Sensor chuẩn Energy (tổng điện năng) để dùng trong Energy Dashboard.
+- Sensor Energy dựa theo thời điểm đo để dùng trong Energy Dashboard.
 - Hỗ trợ 5 tổng công ty EVN: EVNHANOI, EVNHCMC, EVNNPC, EVNCPC, EVNSPC.
 
 ## Yêu cầu
@@ -39,14 +39,15 @@ Tích hợp này lấy dữ liệu điện năng tiêu thụ từ các cổng EV
 
 ## Sensor và Energy Dashboard
 Sensor được giữ lại để dùng cho Energy Dashboard:
-- `Tổng điện năng` (chuẩn Energy)
+- `EVN Energy (theo thoi diem do)` (chuẩn Energy)
 
 Thêm vào Energy Dashboard:
 1. Settings → Energy → Add consumption.
-2. Chọn entity `Tổng điện năng` (kWh).
+2. Chọn entity `EVN Energy (theo thoi diem do)` (kWh).
 
 ## Giới hạn
 - Dữ liệu cập nhật theo chu kỳ (mặc định 3 giờ), không tức thì.
+- Ngày hiển thị trong Energy được ghi theo thời điểm đo công tơ nếu có.
 
 ## Hỗ trợ
 Vui lòng tạo issue trên GitHub repository.
