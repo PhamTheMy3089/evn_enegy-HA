@@ -1,6 +1,7 @@
 """Setup and manage HomeAssistant Entities."""
 
 import logging
+from datetime import datetime, time
 from typing import Any
 import os
 import json
@@ -10,14 +11,22 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.components.recorder.statistics import (
+    StatisticData,
+    StatisticMetaData,
+    async_add_external_statistics,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from homeassistant.util import dt as dt_util
+from homeassistant.const import UnitOfEnergy
 
 from . import evn_power_insights
 from .const import (
@@ -28,16 +37,23 @@ from .const import (
     CONF_DEVICE_NAME,
     CONF_DEVICE_SW_VERSION,
     CONF_ERR_INVALID_AUTH,
+    CONF_ERR_UNKNOWN,
     CONF_MONTHLY_START,
     CONF_PASSWORD,
     CONF_SUCCESS,
     CONF_USERNAME,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    ID_ENERGY_DELTA,
+    ID_ENERGY_TOTAL,
+    ID_ENERGY_TOTAL_DERIVED,
+    ID_TO_DATE,
 )
 from .types import EVN_SENSORS, EVNSensorEntityDescription
 
 _LOGGER = logging.getLogger(__name__)
+
+STORAGE_VERSION = 1
 
 
 async def async_setup_entry(
@@ -48,7 +64,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN][entry.entry_id]
 
     evn_api = evn_power_insights.EVNAPI(hass, True)
-    evn_device = EVNDevice(entry_config, evn_api)
+    evn_device = EVNDevice(entry.entry_id, entry_config, evn_api)
 
     await evn_device.async_create_coordinator(hass)
 
@@ -63,8 +79,9 @@ async def async_setup_entry(
 class EVNDevice:
     """EVN Device Instance"""
 
-    def __init__(self, dataset, api: evn_power_insights.EVNAPI) -> None:
+    def __init__(self, entry_id, dataset, api: evn_power_insights.EVNAPI) -> None:
         """Construct Device wrapper."""
+        self._entry_id = entry_id
         self._name = f"{CONF_DEVICE_NAME}: {dataset[CONF_CUSTOMER_ID]}"
         self._coordinator: DataUpdateCoordinator = None
         self.hass = api.hass
@@ -76,6 +93,10 @@ class EVNDevice:
         self._api = api
         self._data = {}
         self._branches_data = None  # Will store the branch data
+        self._energy_state = None
+        self._store = Store(
+            self.hass, STORAGE_VERSION, f"{DOMAIN}.{self._entry_id}.energy_state"
+        )
 
     async def async_load_branches(self):
         """Load EVN branches data asynchronously"""
@@ -88,6 +109,108 @@ class EVNDevice:
             )
         except Exception as ex:
             _LOGGER.error("Error loading branches data: %s", str(ex))
+
+    async def async_load_energy_state(self):
+        """Load persisted energy state."""
+        if self._energy_state is not None:
+            return
+
+        stored = await self._store.async_load()
+        self._energy_state = stored or {
+            "last_total": None,
+            "derived_total": 0.0,
+            "last_stat_date": None,
+        }
+
+    async def async_save_energy_state(self):
+        """Persist energy state."""
+        if self._energy_state is None:
+            return
+        await self._store.async_save(self._energy_state)
+
+    async def _update_derived_energy(self):
+        """Update derived energy values from the cumulative meter reading."""
+        current_total = None
+        if ID_ENERGY_TOTAL in self._data:
+            current_total = self._data.get(ID_ENERGY_TOTAL, {}).get("value")
+
+        if current_total is None:
+            return
+
+        await self.async_load_energy_state()
+
+        last_total = self._energy_state.get("last_total")
+        derived_total = float(self._energy_state.get("derived_total", 0.0))
+
+        delta = 0.0
+        if isinstance(last_total, (int, float)):
+            delta = current_total - last_total
+            if delta < 0:
+                delta = 0.0
+        else:
+            daily_new = self._data.get("econ_daily_new", {}).get("value")
+            if isinstance(daily_new, (int, float)):
+                delta = max(daily_new, 0.0)
+
+        derived_total += delta
+
+        self._energy_state.update(
+            {
+                "last_total": current_total,
+                "derived_total": derived_total,
+                "last_update": datetime.utcnow().isoformat(),
+            }
+        )
+        await self.async_save_energy_state()
+
+        self._data[ID_ENERGY_DELTA] = {"value": round(delta, 2)}
+        self._data[ID_ENERGY_TOTAL_DERIVED] = {"value": round(derived_total, 2)}
+        await self._write_backdated_statistics()
+
+    async def _write_backdated_statistics(self):
+        """Write backdated statistics based on meter time."""
+        to_date_str = self._data.get(ID_TO_DATE, {}).get("value")
+        if not to_date_str:
+            return
+
+        try:
+            measurement_date = datetime.strptime(to_date_str, "%d/%m/%Y").date()
+        except ValueError:
+            return
+
+        await self.async_load_energy_state()
+        last_stat_date = self._energy_state.get("last_stat_date")
+        if last_stat_date == measurement_date.isoformat():
+            return
+
+        derived_total = float(self._energy_state.get("derived_total", 0.0))
+        tz = (
+            dt_util.get_time_zone(self.hass.config.time_zone)
+            if self.hass.config.time_zone
+            else dt_util.UTC
+        )
+        start = dt_util.as_utc(
+            datetime.combine(measurement_date, time.min).replace(tzinfo=tz)
+        )
+
+        statistic_id = f"{ENTITY_DOMAIN}.{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
+        metadata = StatisticMetaData(
+            has_mean=False,
+            has_sum=True,
+            name=f"{self._name} EVN Energy (theo thoi diem do)",
+            source=DOMAIN,
+            statistic_id=statistic_id,
+            unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        )
+        data = StatisticData(start=start, sum=derived_total)
+        try:
+            await async_add_external_statistics(self.hass, metadata, [data])
+        except Exception as err:
+            _LOGGER.warning("Failed to write backdated statistics: %s", err)
+            return
+
+        self._energy_state["last_stat_date"] = measurement_date.isoformat()
+        await self.async_save_energy_state()
 
     async def update(self) -> dict[str, Any]:
         """Update device data from EVN Endpoints."""
@@ -125,6 +248,7 @@ class EVNDevice:
                 "[EVN ID %s] Successfully fetched new data from EVN Server.",
                 self._customer_id,
             )
+            await self._update_derived_energy()
 
         else:
             _LOGGER.warning(
@@ -145,6 +269,7 @@ class EVNDevice:
             return
 
         await self.async_load_branches()
+        await self.async_load_energy_state()
 
         coordinator = DataUpdateCoordinator(
             hass,

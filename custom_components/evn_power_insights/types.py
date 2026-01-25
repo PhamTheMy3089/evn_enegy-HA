@@ -9,7 +9,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfEnergy
 
-from .const import ID_ENERGY_TOTAL
+from .const import ID_ENERGY_DELTA, ID_ENERGY_TOTAL, ID_ENERGY_TOTAL_DERIVED
 
 
 @dataclass
@@ -119,6 +119,24 @@ EVN_SENSORS: tuple[EVNSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
         device_class=SensorDeviceClass.ENERGY,
-        value_fn=lambda data: data[ID_ENERGY_TOTAL],
+        value_fn=lambda data: data.get(ID_ENERGY_TOTAL, {"value": None}),
+    ),
+    EVNSensorEntityDescription(
+        key=ID_ENERGY_TOTAL_DERIVED,
+        name="EVN Energy (theo thoi diem do)",
+        icon="mdi:lightning-bolt",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.ENERGY,
+        value_fn=lambda data: data.get(ID_ENERGY_TOTAL_DERIVED, {"value": None}),
+    ),
+    EVNSensorEntityDescription(
+        key=ID_ENERGY_DELTA,
+        name="Điện năng tiêu thụ (giữa 2 lần cập nhật)",
+        icon="mdi:flash",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.ENERGY,
+        value_fn=lambda data: data.get(ID_ENERGY_DELTA, {"value": None}),
     ),
 )

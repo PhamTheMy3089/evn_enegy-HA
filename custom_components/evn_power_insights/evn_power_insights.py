@@ -13,6 +13,7 @@ from typing import Any
 from dateutil import parser
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import (
     async_create_clientsession,
     async_get_clientsession,
@@ -398,37 +399,30 @@ class EVNAPI:
 
         sub_data = resp_json["data"]["chiSoNgay"]
 
-        from_date = parser.parse(sub_data[0]["ngay"], dayfirst=True)
-        to_date = parser.parse(
-            sub_data[(-1 if len(sub_data) > 1 else 0)]["ngay"], dayfirst=True
-        ) - timedelta(days=1)
-        previous_date = parser.parse(
-            sub_data[(-2 if len(sub_data) > 2 else 0)]["ngay"], dayfirst=True
-        ) - timedelta(days=1)
+        first_index = 0
+        latest_index = -1 if len(sub_data) > 1 else 0
+        prev_index = -2 if len(sub_data) > 1 else 0
+        prevprev_index = -3 if len(sub_data) > 2 else prev_index
 
-        econ_total_new = round(
-            float(str(sub_data[(-1 if len(sub_data) > 1 else 0)]["sg"])), 2
-        )
-        econ_total_old = round(float(str(sub_data[0]["sg"])), 2)
+        from_date = parser.parse(sub_data[first_index]["ngay"], dayfirst=True)
+        to_date = parser.parse(sub_data[latest_index]["ngay"], dayfirst=True)
+        previous_date = parser.parse(sub_data[prev_index]["ngay"], dayfirst=True)
 
-        econ_daily_new = round(
-            float(sub_data[(-1 if len(sub_data) > 1 else 0)]["sg"])
-            - float(sub_data[(-2 if len(sub_data) > 2 else 0)]["sg"]),
-            2,
-        )
-        econ_daily_old = round(
-            float(sub_data[(-2 if len(sub_data) > 2 else 0)]["sg"])
-            - float(sub_data[(-3 if len(sub_data) > 3 else 0)]["sg"]),
-            2,
-        )
+        econ_total_new = round(safe_float(sub_data[latest_index].get("sg")), 2)
+        econ_total_start = round(safe_float(sub_data[first_index].get("sg")), 2)
+        econ_total_prev = round(safe_float(sub_data[prev_index].get("sg")), 2)
+        econ_total_prevprev = round(safe_float(sub_data[prevprev_index].get("sg")), 2)
+
+        econ_daily_new = round(max(econ_total_new - econ_total_prev, 0.0), 2)
+        econ_daily_old = round(max(econ_total_prev - econ_total_prevprev, 0.0), 2)
 
         fetched_data = {
             "status": CONF_SUCCESS,
-            ID_ECON_TOTAL_OLD: econ_total_old,
+            ID_ECON_TOTAL_OLD: econ_total_start,
             ID_ECON_TOTAL_NEW: econ_total_new,
             ID_ECON_DAILY_OLD: econ_daily_old,
             ID_ECON_DAILY_NEW: econ_daily_new,
-            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_old, 2),
+            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_start, 2),
             "to_date": to_date.date(),
             "from_date": from_date.date(),
             "previous_date": previous_date.date(),
@@ -528,47 +522,57 @@ class EVNAPI:
 
         resp_json = resp_json["data"]["sanluong_tungngay"]
 
-        from_date = strip_date_range(resp_json[0]["ngayFull"])
-        to_date = strip_date_range(
-            resp_json[(-2 if len(resp_json) > 2 else 0)]["ngayFull"]
-        )
-        previous_date = strip_date_range(
-            resp_json[(-3 if len(resp_json) > 3 else 0)]["ngayFull"]
-        )
+        def _get_date(item):
+            return item.get("thoidiemdo") or item.get("ngayFull")
+
+        from_date = strip_date_range(_get_date(resp_json[0]))
+        first_index = 0
+        latest_index = -1 if len(resp_json) > 1 else 0
+        prev_index = -2 if len(resp_json) > 1 else 0
+        prevprev_index = -3 if len(resp_json) > 2 else prev_index
+
+        to_date = strip_date_range(_get_date(resp_json[latest_index]))
+        previous_date = strip_date_range(_get_date(resp_json[prev_index]))
 
         econ_total_new = round(
-            float(
-                str(
-                    resp_json[(-1 if len(resp_json) > 1 else 0)]["tong_p_giao"]
-                ).replace(",", "")
+            safe_float(
+                resp_json[latest_index].get("p_giao_bt")
+                or resp_json[latest_index].get("tong_p_giao")
             ),
             2,
         )
-        econ_total_old = round(
-            float(str(resp_json[0]["tong_p_giao"]).replace(",", "")), 2
+        econ_total_start = round(
+            safe_float(
+                resp_json[first_index].get("p_giao_bt")
+                or resp_json[first_index].get("tong_p_giao")
+            ),
+            2,
         )
+        econ_total_prev = round(
+            safe_float(
+                resp_json[prev_index].get("p_giao_bt")
+                or resp_json[prev_index].get("tong_p_giao")
+            ),
+            2,
+        )
+        econ_total_prevprev = round(
+            safe_float(
+                resp_json[prevprev_index].get("p_giao_bt")
+                or resp_json[prevprev_index].get("tong_p_giao")
+            ),
+            2,
+        )
+
+        econ_daily_new = round(max(econ_total_new - econ_total_prev, 0.0), 2)
+        econ_daily_old = round(max(econ_total_prev - econ_total_prevprev, 0.0), 2)
 
         fetched_data = {
             "status": CONF_SUCCESS,
-            ID_ECON_TOTAL_OLD: econ_total_old,
+            ID_ECON_TOTAL_OLD: econ_total_start,
             ID_ECON_TOTAL_NEW: econ_total_new,
-            ID_ECON_DAILY_NEW: round(
-                float(
-                    str(resp_json[(-2 if len(resp_json) > 2 else 0)]["Tong"]).replace(
-                        ",", ""
-                    )
-                ),
-                2,
-            ),
-            ID_ECON_DAILY_OLD: round(
-                float(
-                    str(resp_json[(-3 if len(resp_json) > 3 else 0)]["Tong"]).replace(
-                        ",", ""
-                    )
-                ),
-                2,
-            ),
-            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_old, 2),
+            ID_ECON_DAILY_NEW: econ_daily_new,
+            ID_ECON_DAILY_OLD: econ_daily_old,
+            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_start, 2),
             "to_date": to_date.date(),
             "from_date": from_date.date(),
             "previous_date": previous_date.date(),
@@ -654,32 +658,30 @@ class EVNAPI:
                 "data": str(resp_json[0]),
             }
 
-        from_date = parser.parse(
-            valid_info[(-1 if len(valid_info) > 1 else 0)]["THOI_GIAN_BAT_DAU"]
-        )
-        to_date = parser.parse(valid_info[0]["THOI_GIAN_BAT_DAU"])
-        previous_date = parser.parse(
-            valid_info[(1 if len(valid_info) > 1 else 0)]["THOI_GIAN_BAT_DAU"]
-        )
+        latest_index = 0
+        prev_index = 1 if len(valid_info) > 1 else 0
+        prevprev_index = 2 if len(valid_info) > 2 else prev_index
+        start_index = -1 if len(valid_info) > 1 else 0
+
+        from_date = parser.parse(valid_info[start_index]["THOI_GIAN_BAT_DAU"])
+        to_date = parser.parse(valid_info[latest_index]["THOI_GIAN_BAT_DAU"])
+        previous_date = parser.parse(valid_info[prev_index]["THOI_GIAN_BAT_DAU"])
+
+        econ_total_new = round(safe_float(valid_info[latest_index].get("CHI_SO_KET_THUC")), 2)
+        econ_total_start = round(safe_float(valid_info[start_index].get("CHI_SO_BAT_DAU")), 2)
+        econ_total_prev = round(safe_float(valid_info[prev_index].get("CHI_SO_KET_THUC")), 2)
+        econ_total_prevprev = round(safe_float(valid_info[prevprev_index].get("CHI_SO_KET_THUC")), 2)
+
+        econ_daily_new = round(max(econ_total_new - econ_total_prev, 0.0), 2)
+        econ_daily_old = round(max(econ_total_prev - econ_total_prevprev, 0.0), 2)
 
         fetched_data = {
             "status": CONF_SUCCESS,
-            ID_ECON_TOTAL_NEW: round(float(valid_info[0]["CHI_SO_KET_THUC"]), 2),
-            ID_ECON_TOTAL_OLD: round(
-                float(valid_info[(-1 if len(valid_info) > 1 else 0)]["CHI_SO_BAT_DAU"]),
-                2,
-            ),
-            ID_ECON_DAILY_NEW: round(float(valid_info[0]["SAN_LUONG"]), 2),
-            ID_ECON_DAILY_OLD: round(
-                float(valid_info[(1 if len(valid_info) > 1 else 0)]["SAN_LUONG"]), 2
-            ),
-            ID_ECON_MONTHLY_NEW: round(
-                float(valid_info[0]["CHI_SO_KET_THUC"])
-                - float(
-                    valid_info[(-1 if len(valid_info) > 1 else 0)]["CHI_SO_BAT_DAU"]
-                ),
-                2,
-            ),
+            ID_ECON_TOTAL_NEW: econ_total_new,
+            ID_ECON_TOTAL_OLD: econ_total_start,
+            ID_ECON_DAILY_NEW: econ_daily_new,
+            ID_ECON_DAILY_OLD: econ_daily_old,
+            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_start, 2),
             "from_date": from_date.date(),
             "to_date": to_date.date(),
             "previous_date": previous_date.date(),
@@ -851,25 +853,30 @@ class EVNAPI:
         if not resp_json:
             raise ValueError("Received empty response from EVN data API.")
 
-        from_date = parser.parse(resp_json[0]["strTime"], dayfirst=True) + timedelta(days=1)
-        to_date = parser.parse(
-            resp_json[(-1 if len(resp_json) > 1 else 0)]["strTime"], dayfirst=True
-        )
-        previous_date = parser.parse(
-            resp_json[(-2 if len(resp_json) > 2 else 0)]["strTime"], dayfirst=True
-        )
+        first_index = 0
+        latest_index = -1 if len(resp_json) > 1 else 0
+        prev_index = -2 if len(resp_json) > 1 else 0
+        prevprev_index = -3 if len(resp_json) > 2 else prev_index
+
+        from_date = parser.parse(resp_json[first_index]["strTime"], dayfirst=True)
+        to_date = parser.parse(resp_json[latest_index]["strTime"], dayfirst=True)
+        previous_date = parser.parse(resp_json[prev_index]["strTime"], dayfirst=True)
+
+        econ_total_new = round(safe_float(resp_json[latest_index].get("dGiaoBT")), 2)
+        econ_total_start = round(safe_float(resp_json[first_index].get("dGiaoBT")), 2)
+        econ_total_prev = round(safe_float(resp_json[prev_index].get("dGiaoBT")), 2)
+        econ_total_prevprev = round(safe_float(resp_json[prevprev_index].get("dGiaoBT")), 2)
+
+        econ_daily_new = round(max(econ_total_new - econ_total_prev, 0.0), 2)
+        econ_daily_old = round(max(econ_total_prev - econ_total_prevprev, 0.0), 2)
 
         fetched_data = {
             "status": CONF_SUCCESS,
-            ID_ECON_TOTAL_OLD: round(safe_float(resp_json[0].get("dGiaoBT")), 2),
-            ID_ECON_TOTAL_NEW: round(safe_float(resp_json[-1].get("dGiaoBT")), 2),
-            ID_ECON_DAILY_NEW: round(safe_float(resp_json[-1].get("dSanLuongBT")), 2),
-            ID_ECON_DAILY_OLD: round(
-                safe_float(resp_json[-2].get("dSanLuongBT")) if len(resp_json) > 1 else 0.0, 2
-            ),
-            ID_ECON_MONTHLY_NEW: round(
-                safe_float(resp_json[-1].get("dGiaoBT")) - safe_float(resp_json[0].get("dGiaoBT"))
-            ),
+            ID_ECON_TOTAL_OLD: econ_total_start,
+            ID_ECON_TOTAL_NEW: econ_total_new,
+            ID_ECON_DAILY_NEW: econ_daily_new,
+            ID_ECON_DAILY_OLD: econ_daily_old,
+            ID_ECON_MONTHLY_NEW: round(econ_total_new - econ_total_start, 2),
             "to_date": to_date.date(),
             "from_date": from_date.date(),
             "previous_date": previous_date.date(),
@@ -954,6 +961,8 @@ async def json_processing(resp):
 
     try:
         res = await resp.text()
+        if not res or not res.strip():
+            return CONF_EMPTY, {"status": CONF_EMPTY, "data": {}}
         resp_json = json.loads(res, strict=False)
 
         state = CONF_SUCCESS if bool(resp_json) else CONF_EMPTY
