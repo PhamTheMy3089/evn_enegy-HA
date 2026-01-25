@@ -193,7 +193,9 @@ class EVNDevice:
             datetime.combine(measurement_date, time.min).replace(tzinfo=tz)
         )
 
-        statistic_id = f"{ENTITY_DOMAIN}.{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
+        statistic_id = (
+            f"{DOMAIN}_{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
+        )
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,

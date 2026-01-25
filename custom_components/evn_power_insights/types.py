@@ -136,7 +136,7 @@ EVN_SENSORS: tuple[EVNSensorEntityDescription, ...] = (
         icon="mdi:flash",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.ENERGY,
+        device_class=None,
         value_fn=lambda data: data.get(ID_ENERGY_DELTA, {"value": None}),
     ),
 )
