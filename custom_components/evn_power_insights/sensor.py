@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, time
+import re
 from typing import Any
 import os
 import json
@@ -193,9 +194,10 @@ class EVNDevice:
             datetime.combine(measurement_date, time.min).replace(tzinfo=tz)
         )
 
-        statistic_id = (
-            f"{DOMAIN}_{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
-        )
+        raw_stat_id = f"{DOMAIN}_{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
+        statistic_id = re.sub(r"[^a-z0-9_]", "_", raw_stat_id)
+        if not statistic_id[0].isalpha():
+            statistic_id = f"evn_{statistic_id}"
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
