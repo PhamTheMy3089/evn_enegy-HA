@@ -184,7 +184,11 @@ class EVNDevice:
         if last_stat_date == measurement_date.isoformat():
             return
 
-        derived_total = float(self._energy_state.get("derived_total", 0.0))
+        # Dùng chỉ số công tơ thực từ API
+        econ_total_new = self._data.get(ID_ECON_TOTAL_NEW, {}).get("value")
+        if econ_total_new is None:
+            return
+        
         tz = (
             dt_util.get_time_zone(self.hass.config.time_zone)
             if self.hass.config.time_zone
@@ -206,7 +210,7 @@ class EVNDevice:
             statistic_id=statistic_id,
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         )
-        data = StatisticData(start=start, sum=derived_total)
+        data = StatisticData(start=start, sum=econ_total_new)
         try:
             await async_add_external_statistics(self.hass, metadata, [data])
         except Exception as err:
