@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.0.5
+- Sửa lỗi thiếu import ID_ECON_TOTAL_NEW trong sensor.py.
+
 ## v0.0.4
 - Sửa logic external statistics dùng chỉ số công tơ thực (econ_total_new) thay vì derived_total.
 - Energy Dashboard giờ hiển thị đúng lượng tiêu thụ theo delta giữa các ngày.
