@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.0.6
+- Sửa format statistic_id cho external statistics theo chuẩn source:unique_id.
+
 ## v0.0.5
 - Sửa lỗi thiếu import ID_ECON_TOTAL_NEW trong sensor.py.
 

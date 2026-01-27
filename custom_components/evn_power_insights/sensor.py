@@ -199,10 +199,10 @@ class EVNDevice:
             datetime.combine(measurement_date, time.min).replace(tzinfo=tz)
         )
 
-        raw_stat_id = f"{DOMAIN}_{self._customer_id}_{ID_ENERGY_TOTAL_DERIVED}".lower()
-        statistic_id = re.sub(r"[^a-z0-9_]", "_", raw_stat_id)
-        if not statistic_id[0].isalpha():
-            statistic_id = f"evn_{statistic_id}"
+        # Format: source:unique_id (không dùng dấu chấm)
+        stat_unique_id = f"{self._customer_id.lower()}_energy_backdate"
+        statistic_id = f"{DOMAIN}:{stat_unique_id}"
+        
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
