@@ -212,17 +212,18 @@ class EVNDevice:
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         )
         
-        # Ghi 2 bản ghi: ngày trước from_date và from_date để Energy hiển thị delta vào from_date
+        # Ghi 2 bản ghi: cuối ngày trước (23:59:59) và đầu ngày hiện tại (00:00)
+        # Để mỗi ngày có 2 bản ghi (00:00 và 23:59:59) giúp Energy hiển thị full ngày
         stats_data = []
         
-        # Ghi vào ngày trước from_date với chỉ số công tơ tại thời điểm bắt đầu
+        # Ghi vào CUỐI ngày trước (23:59:59) với chỉ số công tơ tại thời điểm bắt đầu
         prev_date = from_date - timedelta(days=1)
         start_prev = dt_util.as_utc(
-            datetime.combine(prev_date, time.min).replace(tzinfo=tz)
+            datetime.combine(prev_date, time(23, 59, 59)).replace(tzinfo=tz)
         )
         stats_data.append(StatisticData(start=start_prev, sum=econ_total_old))
         
-        # Ghi vào from_date với chỉ số công tơ tại thời điểm cuối
+        # Ghi vào ĐẦU from_date (00:00) với chỉ số công tơ tại thời điểm cuối
         start_from = dt_util.as_utc(
             datetime.combine(from_date, time.min).replace(tzinfo=tz)
         )

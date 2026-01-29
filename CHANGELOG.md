@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.8
+- Sửa logic backdate statistics: ghi vào cuối ngày trước (23:59:59) và đầu ngày hiện tại (00:00).
+- Mỗi ngày sẽ có 2 bản ghi (00:00 và 23:59:59) giúp Energy Dashboard hiển thị full ngày đúng cách.
+- Tooltip sẽ hiển thị đúng khoảng thời gian (00:00 - 23:59:59) thay vì chỉ 1 thời điểm.
+
 ## v0.0.7
 - Sửa logic backdate statistics: ghi vào from_date (ngày bắt đầu kỳ đo) thay vì to_date.
 - Ghi 2 bản ghi: ngày trước from_date và from_date để Energy hiển thị delta vào đúng ngày tiêu thụ.
