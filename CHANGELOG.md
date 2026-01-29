@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.7
+- Sửa logic backdate statistics: ghi vào from_date (ngày bắt đầu kỳ đo) thay vì to_date.
+- Ghi 2 bản ghi: ngày trước from_date và from_date để Energy hiển thị delta vào đúng ngày tiêu thụ.
+- Đảm bảo start timestamp là 00:00 để hiển thị full ngày.
+
 ## v0.0.6
 - Sửa format statistic_id cho external statistics theo chuẩn source:unique_id.
 

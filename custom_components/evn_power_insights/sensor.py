@@ -1,7 +1,7 @@
 """Setup and manage HomeAssistant Entities."""
 
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import re
 from typing import Any
 import os
@@ -46,9 +46,11 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     ID_ECON_TOTAL_NEW,
+    ID_ECON_TOTAL_OLD,
     ID_ENERGY_DELTA,
     ID_ENERGY_TOTAL,
     ID_ENERGY_TOTAL_DERIVED,
+    ID_FROM_DATE,
     ID_TO_DATE,
 )
 from .types import EVN_SENSORS, EVNSensorEntityDescription
@@ -171,23 +173,24 @@ class EVNDevice:
 
     async def _write_backdated_statistics(self):
         """Write backdated statistics based on meter time."""
-        to_date_str = self._data.get(ID_TO_DATE, {}).get("value")
-        if not to_date_str:
+        from_date_str = self._data.get(ID_FROM_DATE, {}).get("value")
+        if not from_date_str:
             return
 
         try:
-            measurement_date = datetime.strptime(to_date_str, "%d/%m/%Y").date()
+            from_date = datetime.strptime(from_date_str, "%d/%m/%Y").date()
         except ValueError:
             return
 
         await self.async_load_energy_state()
         last_stat_date = self._energy_state.get("last_stat_date")
-        if last_stat_date == measurement_date.isoformat():
+        if last_stat_date == from_date.isoformat():
             return
 
-        # Dùng chỉ số công tơ thực từ API
+        econ_total_old = self._data.get(ID_ECON_TOTAL_OLD, {}).get("value")
         econ_total_new = self._data.get(ID_ECON_TOTAL_NEW, {}).get("value")
-        if econ_total_new is None:
+        
+        if econ_total_old is None or econ_total_new is None:
             return
         
         tz = (
@@ -195,10 +198,7 @@ class EVNDevice:
             if self.hass.config.time_zone
             else dt_util.UTC
         )
-        start = dt_util.as_utc(
-            datetime.combine(measurement_date, time.min).replace(tzinfo=tz)
-        )
-
+        
         # Format: source:unique_id (không dùng dấu chấm)
         stat_unique_id = f"{self._customer_id.lower()}_energy_backdate"
         statistic_id = f"{DOMAIN}:{stat_unique_id}"
@@ -211,14 +211,30 @@ class EVNDevice:
             statistic_id=statistic_id,
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         )
-        data = StatisticData(start=start, sum=econ_total_new)
+        
+        # Ghi 2 bản ghi: ngày trước from_date và from_date để Energy hiển thị delta vào from_date
+        stats_data = []
+        
+        # Ghi vào ngày trước from_date với chỉ số công tơ tại thời điểm bắt đầu
+        prev_date = from_date - timedelta(days=1)
+        start_prev = dt_util.as_utc(
+            datetime.combine(prev_date, time.min).replace(tzinfo=tz)
+        )
+        stats_data.append(StatisticData(start=start_prev, sum=econ_total_old))
+        
+        # Ghi vào from_date với chỉ số công tơ tại thời điểm cuối
+        start_from = dt_util.as_utc(
+            datetime.combine(from_date, time.min).replace(tzinfo=tz)
+        )
+        stats_data.append(StatisticData(start=start_from, sum=econ_total_new))
+        
         try:
-            await async_add_external_statistics(self.hass, metadata, [data])
+            await async_add_external_statistics(self.hass, metadata, stats_data)
         except Exception as err:
             _LOGGER.warning("Failed to write backdated statistics: %s", err)
             return
 
-        self._energy_state["last_stat_date"] = measurement_date.isoformat()
+        self._energy_state["last_stat_date"] = from_date.isoformat()
         await self.async_save_energy_state()
 
     async def update(self) -> dict[str, Any]:
