@@ -146,6 +146,17 @@ class EVNDevice:
         last_total = self._energy_state.get("last_total")
         derived_total = float(self._energy_state.get("derived_total", 0.0))
 
+        # Chỉ update nếu dữ liệu thay đổi
+        if isinstance(last_total, (int, float)) and last_total == current_total:
+            _LOGGER.debug(
+                "[EVN ID %s] No data change (total=%.2f), skipping update",
+                self._customer_id, current_total
+            )
+            # Giữ nguyên giá trị cũ
+            self._data[ID_ENERGY_DELTA] = {"value": self._energy_state.get("last_delta", 0.0)}
+            self._data[ID_ENERGY_TOTAL_DERIVED] = {"value": derived_total}
+            return
+
         delta = 0.0
         if isinstance(last_total, (int, float)):
             delta = current_total - last_total
@@ -162,6 +173,7 @@ class EVNDevice:
             {
                 "last_total": current_total,
                 "derived_total": derived_total,
+                "last_delta": delta,
                 "last_update": datetime.utcnow().isoformat(),
             }
         )
@@ -175,22 +187,35 @@ class EVNDevice:
         """Write backdated statistics based on meter time."""
         from_date_str = self._data.get(ID_FROM_DATE, {}).get("value")
         if not from_date_str:
+            _LOGGER.debug("[EVN ID %s] No from_date in data, skipping statistics write", self._customer_id)
             return
 
         try:
             from_date = datetime.strptime(from_date_str, "%d/%m/%Y").date()
-        except ValueError:
+        except ValueError as e:
+            _LOGGER.warning("[EVN ID %s] Invalid from_date format: %s", self._customer_id, from_date_str)
             return
 
         await self.async_load_energy_state()
         last_stat_date = self._energy_state.get("last_stat_date")
-        if last_stat_date == from_date.isoformat():
-            return
-
+        last_econ_total = self._energy_state.get("last_econ_total")
+        
         econ_total_old = self._data.get(ID_ECON_TOTAL_OLD, {}).get("value")
         econ_total_new = self._data.get(ID_ECON_TOTAL_NEW, {}).get("value")
         
         if econ_total_old is None or econ_total_new is None:
+            _LOGGER.warning(
+                "[EVN ID %s] Missing econ_total values: old=%s, new=%s",
+                self._customer_id, econ_total_old, econ_total_new
+            )
+            return
+        
+        # Chỉ ghi statistics nếu dữ liệu thay đổi
+        if last_stat_date == from_date.isoformat() and last_econ_total == econ_total_new:
+            _LOGGER.debug(
+                "[EVN ID %s] No data change for %s (sum=%.2f), skipping statistics write",
+                self._customer_id, from_date, econ_total_new
+            )
             return
         
         tz = (
@@ -231,11 +256,21 @@ class EVNDevice:
         
         try:
             await async_add_external_statistics(self.hass, metadata, stats_data)
+            _LOGGER.info(
+                "[EVN ID %s] Successfully wrote backdated statistics for %s: "
+                "prev_date=%s (sum=%.2f), from_date=%s (sum=%.2f)",
+                self._customer_id, from_date,
+                prev_date, econ_total_old, from_date, econ_total_new
+            )
         except Exception as err:
-            _LOGGER.warning("Failed to write backdated statistics: %s", err)
+            _LOGGER.warning(
+                "[EVN ID %s] Failed to write backdated statistics: %s",
+                self._customer_id, err, exc_info=True
+            )
             return
 
         self._energy_state["last_stat_date"] = from_date.isoformat()
+        self._energy_state["last_econ_total"] = econ_total_new
         await self.async_save_energy_state()
 
     async def update(self) -> dict[str, Any]:

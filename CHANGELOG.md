@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.9
+- Đổi scan interval từ 3 giờ sang 24 giờ (phù hợp với dữ liệu EVN chỉ cập nhật 1 lần/ngày).
+- Chỉ update sensor và ghi statistics khi dữ liệu thay đổi (tránh ghi trùng lặp).
+- Thêm logging chi tiết để debug external statistics.
+
 ## v0.0.8
 - Sửa logic backdate statistics: ghi vào cuối ngày trước (23:59:59) và đầu ngày hiện tại (00:00).
 - Mỗi ngày sẽ có 2 bản ghi (00:00 và 23:59:59) giúp Energy Dashboard hiển thị full ngày đúng cách.
