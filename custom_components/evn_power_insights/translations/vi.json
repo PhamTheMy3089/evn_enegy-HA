@@ -31,6 +31,13 @@
                     "monthly_start": "Ngày bắt đầu hóa đơn"
                 },
                 "description": "Xin hãy điền thông tin tương ứng với:\n\n- Mã khách hàng: **{customer_id}**\n- Chi nhánh: **{evn_name}**\n\n`Lưu ý: Ngày bắt đầu hóa đơn được ghi trong hóa đơn tiền điện của bạn`"
+            },
+            "reconfigure": {
+                "data": {
+                    "username": "Tài khoản",
+                    "password": "Mật khẩu"
+                },
+                "description": "Cập nhật thông tin đăng nhập EVN cho:\n\n- Mã khách hàng: **{customer_id}**\n- Chi nhánh: **{evn_name}**"
             }
         }
     }

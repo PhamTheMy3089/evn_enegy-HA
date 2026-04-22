@@ -107,8 +107,14 @@ class EVNAPI:
 
         self._evn_area = evn_area
 
-        fetch_data = {}        
-        
+        fetch_data = {}
+
+        if evn_area.get("name") in (EVN_NAME.NPC, EVN_NAME.CPC, EVN_NAME.SPC):
+            if self.is_token_expired():
+                login_status = await self.login(evn_area, username, password, customer_id)
+                if login_status != CONF_SUCCESS:
+                    return {"status": login_status}
+
         from_date, to_date = generate_datetime(1 if evn_area.get("name") == EVN_NAME.CPC else monthly_start, offset=1)
 
         if evn_area.get("name") == EVN_NAME.CPC:
@@ -264,6 +270,7 @@ class EVNAPI:
             return CONF_ERR_INVALID_AUTH
 
         self._evn_area["access_token"] = resp_json["access_token"]
+        self._evn_area["token_expiry"] = time.time() + resp_json.get("expires_in", 3600)
         return CONF_SUCCESS
 
     async def login_evncpc(self, username, password) -> str:
@@ -300,6 +307,7 @@ class EVNAPI:
 
         elif "access_token" in resp_json:
             self._evn_area["access_token"] = resp_json["access_token"]
+            self._evn_area["token_expiry"] = time.time() + resp_json.get("expires_in", 3600)
             return CONF_SUCCESS
 
         _LOGGER.error(f"Error while logging in EVN Endpoints: {resp_json}")
@@ -341,6 +349,7 @@ class EVNAPI:
             return CONF_ERR_INVALID_AUTH
 
         self._evn_area["access_token"] = resp_json["token"]
+        self._evn_area["token_expiry"] = time.time() + resp_json.get("expires_in", 3600)
         return CONF_SUCCESS
 
     async def request_update_evnhanoi(

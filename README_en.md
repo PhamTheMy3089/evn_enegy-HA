@@ -40,7 +40,7 @@ Add to Energy Dashboard:
 2. Choose `EVN Energy (theo thoi diem do)` (kWh) entity.
 
 ## Limitations
-- Data updates are periodic (default 3 hours), not real-time.
+- Data updates are periodic (default 24 hours), not real-time.
 - Energy date is recorded based on meter time when available.
 
 ## Support

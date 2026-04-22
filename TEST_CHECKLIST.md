@@ -36,7 +36,7 @@ Sau khi integration được cấu hình:
 
 2. **Kiểm tra dữ liệu**
    - [ ] Sensor có giá trị (không phải "unknown")
-   - [ ] Dữ liệu được cập nhật theo chu kỳ mặc định (3 giờ)
+   - [ ] Dữ liệu được cập nhật theo chu kỳ mặc định (24 giờ)
    - [ ] Giá trị hiển thị đúng với dữ liệu EVN
 
 ## Test Logs
@@ -61,5 +61,5 @@ Sau khi integration được cấu hình:
 
 ## Ghi chú
 
-- Integration sử dụng polling mỗi 3 giờ
+- Integration sử dụng polling mỗi 24 giờ
 - Nếu API trả về lỗi, sensor sẽ giữ giá trị cũ hoặc hiển thị "unavailable"
