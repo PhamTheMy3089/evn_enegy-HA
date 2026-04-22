@@ -9,7 +9,7 @@ DOMAIN = "evn_power_insights"
 CONF_DEVICE_NAME = "EVN Power Insights"
 CONF_DEVICE_MODEL = "EVN Power Insights"
 CONF_DEVICE_MANUFACTURER = "EVN Power Insights"
-CONF_DEVICE_SW_VERSION = "0.0.9"
+CONF_DEVICE_SW_VERSION = "0.1.0"
 
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"

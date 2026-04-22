@@ -46,7 +46,7 @@ Thêm vào Energy Dashboard:
 2. Chọn entity `EVN Energy (theo thoi diem do)` (kWh).
 
 ## Giới hạn
-- Dữ liệu cập nhật theo chu kỳ (mặc định 3 giờ), không tức thì.
+- Dữ liệu cập nhật theo chu kỳ (mặc định 24 giờ), không tức thì.
 - Ngày hiển thị trong Energy được ghi theo thời điểm đo công tơ nếu có.
 
 ## Hỗ trợ

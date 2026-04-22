@@ -178,6 +178,38 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         return await self.async_step_customer_id()
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration of existing entry (update credentials)."""
+        entry = self._get_reconfigure_entry()
+        self._user_data = dict(entry.data)
+
+        if user_input is not None:
+            self._user_data.update(user_input)
+            self._api = evn_power_insights.EVNAPI(self.hass, True)
+            verify_account = await self._try_auth()
+            if verify_account != CONF_SUCCESS:
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=vol.Schema(AUTH_FIELD(self._user_data)),
+                    errors={"base": verify_account},
+                    description_placeholders={
+                        "customer_id": self._user_data[CONF_CUSTOMER_ID],
+                        "evn_name": self._user_data[CONF_AREA].get("name"),
+                    },
+                )
+            return self.async_update_reload_and_abort(entry, data=self._user_data)
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(AUTH_FIELD(self._user_data)),
+            description_placeholders={
+                "customer_id": self._user_data[CONF_CUSTOMER_ID],
+                "evn_name": self._user_data[CONF_AREA].get("name"),
+            },
+        )
+
     async def _try_auth(self):
         """Try authenticating credentials given by the user config flow."""
 

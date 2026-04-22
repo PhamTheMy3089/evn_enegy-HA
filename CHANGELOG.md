@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.0
+- Sửa tài liệu: cập nhật chu kỳ polling từ 3 giờ sang 24 giờ (README, TEST_CHECKLIST).
+- Thêm proactive token refresh cho EVNNPC, EVNCPC, EVNSPC (tránh lỗi 401 âm thầm).
+- Thêm tính năng Reconfigure: người dùng có thể cập nhật Username/Password mà không cần xóa integration.
+- Bổ sung translation strings cho reconfigure step (en/vi).
+
 ## v0.0.9
 - Đổi scan interval từ 3 giờ sang 24 giờ (phù hợp với dữ liệu EVN chỉ cập nhật 1 lần/ngày).
 - Chỉ update sensor và ghi statistics khi dữ liệu thay đổi (tránh ghi trùng lặp).
