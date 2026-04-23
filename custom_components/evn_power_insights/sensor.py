@@ -45,6 +45,7 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    ID_ECON_DAILY_NEW,
     ID_ECON_TOTAL_NEW,
     ID_ECON_TOTAL_OLD,
     ID_ENERGY_DELTA,
@@ -184,50 +185,44 @@ class EVNDevice:
         await self._write_backdated_statistics()
 
     async def _write_backdated_statistics(self):
-        """Write backdated statistics based on meter time."""
+        """Write backdated statistics anchored to the actual measurement date (to_date)."""
+        to_date_str = self._data.get(ID_TO_DATE, {}).get("value")
         from_date_str = self._data.get(ID_FROM_DATE, {}).get("value")
-        if not from_date_str:
-            _LOGGER.debug("[EVN ID %s] No from_date in data, skipping statistics write", self._customer_id)
+
+        if not to_date_str:
+            _LOGGER.debug("[EVN ID %s] No to_date in data, skipping statistics write", self._customer_id)
             return
 
         try:
-            from_date = datetime.strptime(from_date_str, "%d/%m/%Y").date()
-        except ValueError as e:
-            _LOGGER.warning("[EVN ID %s] Invalid from_date format: %s", self._customer_id, from_date_str)
+            to_date = datetime.strptime(to_date_str, "%d/%m/%Y").date()
+        except ValueError:
+            _LOGGER.warning("[EVN ID %s] Invalid to_date format: %s", self._customer_id, to_date_str)
             return
 
         await self.async_load_energy_state()
         last_stat_date = self._energy_state.get("last_stat_date")
         last_econ_total = self._energy_state.get("last_econ_total")
-        
-        econ_total_old = self._data.get(ID_ECON_TOTAL_OLD, {}).get("value")
+
         econ_total_new = self._data.get(ID_ECON_TOTAL_NEW, {}).get("value")
-        
-        if econ_total_old is None or econ_total_new is None:
-            _LOGGER.warning(
-                "[EVN ID %s] Missing econ_total values: old=%s, new=%s",
-                self._customer_id, econ_total_old, econ_total_new
-            )
+        econ_total_old = self._data.get(ID_ECON_TOTAL_OLD, {}).get("value")
+        econ_daily_new_val = self._data.get(ID_ECON_DAILY_NEW, {}).get("value")
+
+        if econ_total_new is None:
+            _LOGGER.warning("[EVN ID %s] Missing econ_total_new", self._customer_id)
             return
-        
-        # Chỉ ghi statistics nếu dữ liệu thay đổi
-        if last_stat_date == from_date.isoformat() and last_econ_total == econ_total_new:
+
+        if last_stat_date == to_date.isoformat() and last_econ_total == econ_total_new:
             _LOGGER.debug(
                 "[EVN ID %s] No data change for %s (sum=%.2f), skipping statistics write",
-                self._customer_id, from_date, econ_total_new
+                self._customer_id, to_date, econ_total_new,
             )
             return
-        
-        tz = (
-            dt_util.get_time_zone(self.hass.config.time_zone)
-            if self.hass.config.time_zone
-            else dt_util.UTC
-        )
-        
-        # Format: source:unique_id (không dùng dấu chấm)
+
+        tz = dt_util.get_time_zone(self.hass.config.time_zone) if self.hass.config.time_zone else dt_util.UTC
+
         stat_unique_id = f"{self._customer_id.lower()}_energy_backdate"
         statistic_id = f"{DOMAIN}:{stat_unique_id}"
-        
+
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
@@ -236,40 +231,55 @@ class EVNDevice:
             statistic_id=statistic_id,
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         )
-        
-        # Ghi 2 bản ghi: cuối ngày trước (23:59:59) và đầu ngày hiện tại (00:00)
-        # Để mỗi ngày có 2 bản ghi (00:00 và 23:59:59) giúp Energy hiển thị full ngày
+
         stats_data = []
-        
-        # Ghi vào CUỐI ngày trước (23:59:59) với chỉ số công tơ tại thời điểm bắt đầu
-        prev_date = from_date - timedelta(days=1)
-        start_prev = dt_util.as_utc(
-            datetime.combine(prev_date, time(23, 59, 59)).replace(tzinfo=tz)
+
+        # Anchor billing-period start so old incorrect entries are zeroed out
+        if from_date_str and econ_total_old is not None:
+            try:
+                from_date = datetime.strptime(from_date_str, "%d/%m/%Y").date()
+                billing_anchor = dt_util.as_utc(
+                    datetime.combine(from_date - timedelta(days=1), time(23, 59, 59)).replace(tzinfo=tz)
+                )
+                billing_start = dt_util.as_utc(
+                    datetime.combine(from_date, time.min).replace(tzinfo=tz)
+                )
+                stats_data.append(StatisticData(start=billing_anchor, sum=econ_total_old))
+                # Overwrite old spike at billing start with same value → 0 delta
+                stats_data.append(StatisticData(start=billing_start, sum=econ_total_old))
+            except ValueError:
+                pass
+
+        # Previous measurement day (to_date - 1) — enables daily delta in Energy Dashboard
+        if isinstance(econ_daily_new_val, (int, float)) and econ_daily_new_val >= 0:
+            econ_total_prev = round(econ_total_new - econ_daily_new_val, 2)
+            prev_meas_date = to_date - timedelta(days=1)
+            start_prev_meas = dt_util.as_utc(
+                datetime.combine(prev_meas_date, time(23, 59, 59)).replace(tzinfo=tz)
+            )
+            stats_data.append(StatisticData(start=start_prev_meas, sum=econ_total_prev))
+
+        # Measurement date entry — main daily bar shown on the correct date
+        start_to = dt_util.as_utc(
+            datetime.combine(to_date, time(23, 59, 59)).replace(tzinfo=tz)
         )
-        stats_data.append(StatisticData(start=start_prev, sum=econ_total_old))
-        
-        # Ghi vào ĐẦU from_date (00:00) với chỉ số công tơ tại thời điểm cuối
-        start_from = dt_util.as_utc(
-            datetime.combine(from_date, time.min).replace(tzinfo=tz)
-        )
-        stats_data.append(StatisticData(start=start_from, sum=econ_total_new))
-        
+        stats_data.append(StatisticData(start=start_to, sum=econ_total_new))
+
         try:
             await async_add_external_statistics(self.hass, metadata, stats_data)
             _LOGGER.info(
-                "[EVN ID %s] Successfully wrote backdated statistics for %s: "
-                "prev_date=%s (sum=%.2f), from_date=%s (sum=%.2f)",
-                self._customer_id, from_date,
-                prev_date, econ_total_old, from_date, econ_total_new
+                "[EVN ID %s] Wrote statistics: to_date=%s (sum=%.2f), prev_day sum=%.2f",
+                self._customer_id, to_date, econ_total_new,
+                round(econ_total_new - (econ_daily_new_val or 0), 2),
             )
         except Exception as err:
             _LOGGER.warning(
                 "[EVN ID %s] Failed to write backdated statistics: %s",
-                self._customer_id, err, exc_info=True
+                self._customer_id, err, exc_info=True,
             )
             return
 
-        self._energy_state["last_stat_date"] = from_date.isoformat()
+        self._energy_state["last_stat_date"] = to_date.isoformat()
         self._energy_state["last_econ_total"] = econ_total_new
         await self.async_save_energy_state()
 
