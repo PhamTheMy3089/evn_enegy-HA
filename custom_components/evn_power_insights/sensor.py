@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.recorder.statistics import (
     StatisticData,
+    StatisticMeanType,
     StatisticMetaData,
     async_add_external_statistics,
 )
@@ -226,6 +227,7 @@ class EVNDevice:
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
+            mean_type=StatisticMeanType.NONE,
             name=f"{self._name} EVN Energy (theo thoi diem do)",
             source=DOMAIN,
             statistic_id=statistic_id,
@@ -234,12 +236,12 @@ class EVNDevice:
 
         stats_data = []
 
-        # Anchor billing-period start so old incorrect entries are zeroed out
+        # Anchor billing-period start — zeroes old incorrect spike at billing start
         if from_date_str and econ_total_old is not None:
             try:
                 from_date = datetime.strptime(from_date_str, "%d/%m/%Y").date()
                 billing_anchor = dt_util.as_utc(
-                    datetime.combine(from_date - timedelta(days=1), time(23, 59, 59)).replace(tzinfo=tz)
+                    datetime.combine(from_date - timedelta(days=1), time.min).replace(tzinfo=tz)
                 )
                 billing_start = dt_util.as_utc(
                     datetime.combine(from_date, time.min).replace(tzinfo=tz)
@@ -250,18 +252,19 @@ class EVNDevice:
             except ValueError:
                 pass
 
-        # Previous measurement day (to_date - 1) — enables daily delta in Energy Dashboard
+        # Previous measurement day — enables daily delta in Energy Dashboard
+        # HA requires top-of-hour timestamps (HH:00:00); use midnight (00:00:00) local time
         if isinstance(econ_daily_new_val, (int, float)) and econ_daily_new_val >= 0:
             econ_total_prev = round(econ_total_new - econ_daily_new_val, 2)
             prev_meas_date = to_date - timedelta(days=1)
             start_prev_meas = dt_util.as_utc(
-                datetime.combine(prev_meas_date, time(23, 59, 59)).replace(tzinfo=tz)
+                datetime.combine(prev_meas_date, time.min).replace(tzinfo=tz)
             )
             stats_data.append(StatisticData(start=start_prev_meas, sum=econ_total_prev))
 
-        # Measurement date entry — main daily bar shown on the correct date
+        # Measurement date entry at midnight — bar appears on to_date in Energy Dashboard
         start_to = dt_util.as_utc(
-            datetime.combine(to_date, time(23, 59, 59)).replace(tzinfo=tz)
+            datetime.combine(to_date, time.min).replace(tzinfo=tz)
         )
         stats_data.append(StatisticData(start=start_to, sum=econ_total_new))
 
