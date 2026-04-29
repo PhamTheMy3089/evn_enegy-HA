@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1
+- Sửa lỗi Energy Dashboard lệch 1 ngày: ghi statistics tại `to_date` (ngày đo thực tế) thay vì `from_date` (ngày đầu kỳ).
+- Sửa lỗi timestamp statistics phải là đầu giờ (HH:00:00) — HA từ chối giá trị 23:59:59.
+- Thêm `mean_type=StatisticMeanType.NONE` vào `StatisticMetaData` để tránh deprecation warning HA 2026.11.
+- Thêm brand icon (`brand/icon.png`, `brand/icon@2x.png`) cho HA 2026.3+ (không cần submit lên home-assistant/brands).
+
 ## v0.1.0
 - Sửa tài liệu: cập nhật chu kỳ polling từ 3 giờ sang 24 giờ (README, TEST_CHECKLIST).
 - Thêm proactive token refresh cho EVNNPC, EVNCPC, EVNSPC (tránh lỗi 401 âm thầm).
