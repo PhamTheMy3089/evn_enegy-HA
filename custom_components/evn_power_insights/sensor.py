@@ -232,6 +232,7 @@ class EVNDevice:
             source=DOMAIN,
             statistic_id=statistic_id,
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+            unit_class="energy",
         )
 
         stats_data = []
@@ -269,7 +270,7 @@ class EVNDevice:
         stats_data.append(StatisticData(start=start_to, sum=econ_total_new))
 
         try:
-            await async_add_external_statistics(self.hass, metadata, stats_data)
+            async_add_external_statistics(self.hass, metadata, stats_data)
             _LOGGER.info(
                 "[EVN ID %s] Wrote statistics: to_date=%s (sum=%.2f), prev_day sum=%.2f",
                 self._customer_id, to_date, econ_total_new,
