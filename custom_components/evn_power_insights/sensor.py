@@ -200,6 +200,12 @@ class EVNDevice:
             _LOGGER.warning("[EVN ID %s] Invalid to_date format: %s", self._customer_id, to_date_str)
             return
 
+        # EVN API sometimes stamps readings with today's date (e.g. 11 AM fetch)
+        # even though the data belongs to yesterday — shift back to t-1 in that case.
+        today = datetime.now().date()
+        if to_date >= today:
+            to_date = today - timedelta(days=1)
+
         await self.async_load_energy_state()
         last_stat_date = self._energy_state.get("last_stat_date")
         last_econ_total = self._energy_state.get("last_econ_total")
