@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.3
+- Sửa lỗi statistics: bỏ `await` khỏi `async_add_external_statistics` (không còn là coroutine trong HA 2026.x).
+- Thêm `unit_class="energy"` vào `StatisticMetaData` để tránh deprecation warning HA 2026.11.
+- Sửa lỗi ngày hiển thị sai: nếu API trả về `to_date = hôm nay` (ví dụ 11 AM), tự động lùi về `t-1`.
+
 ## v0.1.1
 - Sửa lỗi Energy Dashboard lệch 1 ngày: ghi statistics tại `to_date` (ngày đo thực tế) thay vì `from_date` (ngày đầu kỳ).
 - Sửa lỗi timestamp statistics phải là đầu giờ (HH:00:00) — HA từ chối giá trị 23:59:59.
